@@ -1,0 +1,25 @@
+# Virtual environment
+venv/
+
+# Environment files
+*.env
+
+# Log files
+*.log
+
+# Data files
+data.txt
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Ignore Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore temporary files
+*.tmp
+*.swp
