@@ -1,27 +1,29 @@
-from playwright.async_api import async_playwright
-import asyncio
+from playwright.sync_api import sync_playwright
+import time
 
-async def main():
-    async with async_playwright() as p:
-        browser = await p.chromium.launch()
-        page = await browser.new_page()
-        await page.goto("https://www.amazon.com/gp/bestsellers/?ref_=nav_cs_bestsellers")
+def scrape_reddit():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        )
+        page = context.new_page()
 
-        # Query the carousel items
-        carousel_items = await page.query_selector_all("li.a-carousel-card")
+        # Navigate to the Reddit page
+        page.goto("https://www.reddit.com/search/?q=bitcoin&type=link&cId=403056fd-921d-4982-8d0c-39c594f4bc17&iId=d69d4b4c-aceb-41ec-b70b-27a3b6ae4103&t=day")
+
+        time.sleep(5)
+
+        reddit_posts = page.query_selector_all("reddit-feed faceplate-tracker faceplate-screen-reader-content")
 
         with open("items.txt", 'w') as file:
-            for item in carousel_items:
+            for post in reddit_posts:
                 # Extract the text content of the entire item
-                full_text = await item.inner_text()
-                title = full_text.split("\n")[1]
-                rating = full_text.split("\n")[2]
-                price = full_text.split("\n")[4]
+                post_name = post.inner_text()
 
-                # Write the extracted title to the file
-                file.write("Title: " + title + '\n' + "Rating: " + rating + '\n' + "Price: " + price + '\n\n')
+                file.write(post_name + '\n\n')
 
-        await browser.close()
+        browser.close()
 
-# Run the main function
-asyncio.run(main())
+# Run the scraping function
+scrape_reddit()
