@@ -10,18 +10,25 @@ def scrape_reddit():
         page = context.new_page()
 
         # Navigate to the Reddit page
-        page.goto("https://www.reddit.com/search/?q=bitcoin&type=link&cId=403056fd-921d-4982-8d0c-39c594f4bc17&iId=d69d4b4c-aceb-41ec-b70b-27a3b6ae4103&t=day")
+        page.goto("https://www.reddit.com/r/Bitcoin/")
 
         time.sleep(5)
 
-        reddit_posts = page.query_selector_all("reddit-feed faceplate-tracker faceplate-screen-reader-content")
+        reddit_posts = page.query_selector_all("shreddit-feed shreddit-post")
 
         with open("items.txt", 'w') as file:
+            i = 0
             for post in reddit_posts:
-                # Extract the text content of the entire item
-                post_name = post.inner_text()
-
-                file.write(post_name + '\n\n')
+                if i > 1:
+                    post_name = post.query_selector("faceplate-screen-reader-content")
+                    name = post_name.inner_text() if post_name else "No title"
+                    post_text = post.query_selector("p")
+                    text = post_text.inner_text() if post_text else ""
+                    if "Previous Actions" in text:
+                        file.write(name + '\n\n')
+                    else:
+                        file.write(name + "\n" + "Post_text" + text + '\n\n')
+                i += 1
 
         browser.close()
 
