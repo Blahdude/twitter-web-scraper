@@ -1,16 +1,22 @@
-from flask import Flask, render_template, Response
-import scrape  # Import your scraping module
+from flask import Flask, jsonify, send_from_directory
+from flask_cors import CORS
+import scrape
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='react-scraper/build', static_url_path='')
+CORS(app)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return send_from_directory(app.static_folder, 'index.html')
 
-@app.route('/scrape', methods=['GET'])
+@app.route('/api/scrape', methods=['GET'])
 def scrape_and_analyze():
     results = scrape.main()
-    return results
+    return jsonify({"data": results})
 
-if __name__ == '__main__':
+@app.route('/<path:path>')
+def static_proxy(path):
+    return send_from_directory(app.static_folder, path)
+
+if __name__ == "__main__":
     app.run(debug=True)
