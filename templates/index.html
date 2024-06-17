@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scrape and Analyze</title>
+    <script>
+        function startScraping() {
+            document.getElementById('results').innerHTML = 'Scraping...';
+            fetch('/scrape')
+                .then(response => response.text())  // Get response as plain text
+                .then(data => {
+                    document.getElementById('results').innerHTML = data;  // Print the string directly
+                });
+        }
+    </script>
+</head>
+<body>
+    <h1>Scrape and Analyze Bitcoin Posts</h1>
+    <button onclick="startScraping()">Start Scraping</button>
+    <div id="results"></div>
+</body>
+</html>
