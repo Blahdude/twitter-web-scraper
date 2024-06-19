@@ -1,42 +1,97 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { BrowserRouter as Router, Route, Routes, Link } from 'react-router-dom';
+import SentimentAnalysis from './SentimentAnalysis'; // Import the new component
 import './App.css';
 
 function App() {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState('');
   const [loading, setLoading] = useState(false);
+  const [community, setCommunity] = useState('');
+  const [postType, setPostType] = useState('new'); // Default to 'new' posts
 
-  const startScraping = () => {
+  // Function to validate the Reddit community name
+  const isValidCommunityName = (name) => {
+    // Basic check: non-empty and alphanumeric (Reddit community names can contain underscores as well)
+    const regex = /^[a-zA-Z0-9_]+$/;
+    return regex.test(name);
+  };
+
+  const startScraping = (e) => {
+    e.preventDefault(); // Prevent form from reloading the page
+
+    if (!isValidCommunityName(community)) {
+      alert('Please enter a valid Reddit community name.');
+      return;
+    }
+
+    const url = `https://www.reddit.com/r/${community}/${postType}/`;
+
     setLoading(true);
-    axios.get('/api/scrape')
+    console.log("Sending request to /api/scrape with URL:", url);
+    axios.post('/api/scrape', { url: url, postType: postType }, { responseType: 'text' })
       .then(response => {
-        // Assuming the response data is an array of strings or objects
-        const resultArray = response.data.data;
-        // Join the array with a comma and space
-        const formattedData = resultArray.join(', ');
-        setData(formattedData);
-        setLoading(false);
+        console.log("Received response:", response.data);
+        setData(response.data); // Update data state with response data
+        setLoading(false); // Set loading to false
       })
       .catch(error => {
         console.error('Error fetching data:', error);
-        setLoading(false);
+        setLoading(false); // Set loading to false in case of error
       });
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        Scrape and Analyze Bitcoin Posts
-      </header>
-      <main className="App-main">
-        <button className="App-button" onClick={startScraping}>
-          Start Scraping
-        </button>
-        <div className="App-result">
-          {loading ? 'Scraping...' : data ? <pre>{data}</pre> : 'Click the button to start scraping.'}
-        </div>
-      </main>
-    </div>
+    <Router>
+      <div className="App">
+        <header className="App-header">
+          <nav>
+            <Link to="/">Home</Link> | <Link to="/sentiment-analysis">Sentiment Analysis</Link>
+          </nav>
+          <h1>Scraper</h1>
+        </header>
+        <main className="App-main">
+          <Routes>
+            <Route path="/" element={
+              <div>
+                <form onSubmit={startScraping}>
+                  <input 
+                    type="text" 
+                    placeholder="Enter Reddit community name" 
+                    value={community} 
+                    onChange={(e) => setCommunity(e.target.value)} 
+                    required 
+                  />
+                  <div>
+                    <button 
+                      type="button" 
+                      className={`App-button ${postType === 'new' ? 'active' : ''}`}
+                      onClick={() => setPostType('new')}
+                    >
+                      New
+                    </button>
+                    <button 
+                      type="button" 
+                      className={`App-button ${postType === 'hot' ? 'active' : ''}`}
+                      onClick={() => setPostType('hot')}
+                    >
+                      Hot
+                    </button>
+                  </div>
+                  <button type="submit" className="App-button">
+                    Start Scraping
+                  </button>
+                </form>
+                <div className="App-result">
+                  {loading ? 'Scraping...' : <pre>{data}</pre>}
+                </div>
+              </div>
+            } />
+            <Route path="/sentiment-analysis" element={<SentimentAnalysis />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
   );
 }
 

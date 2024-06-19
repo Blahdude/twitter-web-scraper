@@ -6,55 +6,45 @@ import torch
 import numpy as np
 import time
 
-def scrape_reddit_bitcoin_new_posts(page) -> str:
+def error_checking(info) -> bool:
+    for i in info:
+        if "Browse Other Communities" in i:
+            return False
+    return True
+
+def scrape_reddit_page_new_posts(page, url) -> str:
         # Navigate to the Reddit page
-        page.goto("https://www.reddit.com/r/Bitcoin/new/")
+        page.goto(url)
 
         time.sleep(5)
 
-        reddit_posts = page.query_selector_all("shreddit-feed shreddit-post")
+        i = 1
+        if(i == 1):
+            reddit_posts = page.query_selector_all("shreddit-feed shreddit-post")
 
-        text = ""
+            text = ""
 
-        i = 0
-        for post in reddit_posts:
-            if i > 1:
-                post_title = post.query_selector("faceplate-screen-reader-content")
-                title = post_title.inner_text() if post_title else "No title"
-                post_content = post.query_selector("p")
-                content = post_content.inner_text() if post_content else ""
-                if "Previous Actions" in text:
-                    text += title + " --(new post)-- "
-                else:
-                    text += title + "  " + content + " --(new post)-- "
-            i += 1
+            i = 0
+            for post in reddit_posts:
+                if i > 1:
+                    post_title = post.query_selector("faceplate-screen-reader-content")
+                    title = post_title.inner_text() if post_title else "No title"
+                    post_content = post.query_selector("p")
+                    content = post_content.inner_text() if post_content else ""
+                    if "Previous Actions" in text:
+                        text += title + " --(new post)-- "
+                    else:
+                        text += title + "  " + content + " --(new post)-- "
+                i += 1
 
-        return text
+            return text
+        else:
+            return "ERROR"
 
-def scrape_reddit_cryptocurrency_new_posts(page) -> list:
-    page.goto("https://www.reddit.com/r/CryptoCurrency/new/")
-    posts = page.query_selector_all("shreddit-feed shreddit-post")
-
-    data = []
-    i = 0
-    for post in posts:
-        if i > 1:
-            post_title = post.query_selector("faceplate-screen-reader-content")
-            title = post_title.inner_text() if post_title else "No title"
-            post_content = post.query_selector("p")
-            content = post_content.inner_text() if post_content else ""
-            if "Previous Actions" in content:
-                data.append(title + " --(new post)-- ")
-            else:
-                data.append(title + " " + content + " --(new post)-- ")
-        i += 1
-    return data
-
-def filter_bitcoin_posts(data):
-    bitcoin_keywords = ["bitcoin", "btc", "satoshi", "halving"]
+def filter_bitcoin_posts(data, filtered_words):
     filtered_data = [
         post for post in data 
-        if any(keyword.lower() in post.lower() for keyword in bitcoin_keywords)
+        if any(keyword.lower() in post.lower() for keyword in filtered_words)
     ]
     return filtered_data
 
@@ -103,7 +93,19 @@ def process_large_text(text, tokenizer, model, config, chunk_size=512) -> list:
         print(text)
     return result
 
-def main() -> list:
+def main(url, type, text) -> list:
+    if type == 'sentiment':
+        return sentiment(text)
+    else:
+        return scrape(url)
+
+def sentiment(text) -> list:
+    tokenizer = AutoTokenizer.from_pretrained("mwkby/distilbert-base-uncased-sentiment-reddit-crypto")
+    model = AutoModelForSequenceClassification.from_pretrained("mwkby/distilbert-base-uncased-sentiment-reddit-crypto")
+    config = AutoConfig.from_pretrained("mwkby/distilbert-base-uncased-sentiment-reddit-crypto")
+    return process_large_text(text, tokenizer, model, config)
+
+def scrape(url) -> list:
     with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             context = browser.new_context(
@@ -112,15 +114,11 @@ def main() -> list:
             page = context.new_page()
             
             # Scrape both Reddit and CoinDesk
-            rddt_bitcoin_page_text = scrape_reddit_bitcoin_new_posts(page)
-            rddt_cryptocurrency_page_data = scrape_reddit_cryptocurrency_new_posts(page)
-            
+            rddt_page_text = scrape_reddit_page_new_posts(page, url)
             browser.close()
 
-    filtered_data = filter_bitcoin_posts(rddt_cryptocurrency_page_data)
-    cryptocurrency_text = list_to_text(filtered_data)
-    text = rddt_bitcoin_page_text + cryptocurrency_text
-    # Load the model and tokenizer
+    # filtered_data = filter_bitcoin_posts(rddt_page_text)
+    text = list_to_text(rddt_page_text)
     tokenizer = AutoTokenizer.from_pretrained("mwkby/distilbert-base-uncased-sentiment-reddit-crypto")
     model = AutoModelForSequenceClassification.from_pretrained("mwkby/distilbert-base-uncased-sentiment-reddit-crypto")
     config = AutoConfig.from_pretrained("mwkby/distilbert-base-uncased-sentiment-reddit-crypto")

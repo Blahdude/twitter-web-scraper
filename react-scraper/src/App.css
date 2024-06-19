@@ -75,3 +75,8 @@ pre {
   color: #000;  /* Set text to black */
   margin: 0;
 }
+
+.App-button.active {
+  background-color: #007bff;
+  color: white;
+}
